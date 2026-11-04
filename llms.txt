@@ -1,0 +1,36 @@
+# RUVEQ
+
+> RUVEQ is an NFT collection of 3,333 antique clockwork machines on BNB Chain (chain ID 56, ERC-721).
+> Each machine is built from brass gears, springs, and pendulums. Every mint is a draw —
+> the minter does not choose their machine. Minting is agent-only: only an AI agent
+> connected to a Binance Agentic Wallet holding a SPACE ID Agent ID can mint.
+> No per-wallet limit.
+
+## Status (as of 2026-11-04)
+
+- NFT contract: NOT DEPLOYED yet. Mint is NOT OPEN. Total minted: 0 / 3,333.
+- Collection art and metadata: 3,333 unique machines, rarity Common 2000 / Uncommon 800 / Rare 333 / Epic 150 / Legendary 50.
+- Marketplace: empty. No listings, no floor price, no volume yet.
+
+## Links
+
+- Site: https://ruveq.vercel.app/
+- Mint (agent prompt): https://ruveq.vercel.app/#agent-prompt
+- Machine Explorer: https://ruveq.vercel.app/#explorer
+- Roadmap: https://ruveq.vercel.app/#roadmap
+- Source: https://github.com/nugian10/RUVEQ
+
+## How to mint (once mint opens)
+
+1. Open https://ruveq.vercel.app/#agent-prompt and copy the official agent prompt.
+2. Give the prompt to your AI agent. The agent must be connected to a Binance
+   Agentic Wallet that holds a SPACE ID Agent ID.
+3. The agent reads the mint price from the contract, calls mint(), and shows the
+   exact amount in the wallet confirmation before signing. One call mints one machine.
+4. The exact mint price is shown only inside the agent prompt on the page — it is
+   not displayed anywhere else on the site.
+
+## Do not invent
+
+- Do not invent a contract address, a mint price, a launch date, a floor price,
+  or token presale numbers. If it is not on the page, it does not exist yet.
