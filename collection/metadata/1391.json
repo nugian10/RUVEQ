@@ -1,0 +1,39 @@
+{
+  "name": "RUVEQ #1391",
+  "description": "RUVEQ \u2014 Machine #1391. One of 3,333 ancient clockwork machines on BNB Smart Chain. Brass gears, springs and dials \u2014 wound by hand, ticking since before anyone remembers. Agent-only mint.",
+  "image": "https://raw.githubusercontent.com/nugian10/RUVEQ/main/collection/images/1391.svg",
+  "attributes": [
+    {
+      "trait_type": "Body Type",
+      "value": "Automaton"
+    },
+    {
+      "trait_type": "Gear",
+      "value": "Gold Crown"
+    },
+    {
+      "trait_type": "Material",
+      "value": "Steel"
+    },
+    {
+      "trait_type": "Dial",
+      "value": "Black Lacquer"
+    },
+    {
+      "trait_type": "Winding Key",
+      "value": "Crown Key"
+    },
+    {
+      "trait_type": "Pendulum",
+      "value": "None"
+    },
+    {
+      "trait_type": "Background",
+      "value": "Blueprint"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    }
+  ]
+}
