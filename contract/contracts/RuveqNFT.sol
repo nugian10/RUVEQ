@@ -1,0 +1,461 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
+
+// ============================================================
+// RUVEQ — Antique Clockwork Machines NFT Collection
+// ERC-721, BNB Smart Chain Mainnet (Chain ID 56)
+// ------------------------------------------------------------
+// Modelled on the proven OOBIX v2 pattern (WEDO model),
+// adapted to the RUVEQ spec confirmed by Nugraha 4 Nov 2026
+// ("pola oobix v2 tapi flat"):
+//
+// - Name "Ruveq", symbol "RUVEQ", MAX_SUPPLY 3,333.
+//   Token IDs 1–3,333, sequential.
+// - FLAT price: 0.0003 BNB for every token (OOBIX v2 had
+//   two tiers 0.0003 / 0.0008; RUVEQ is flat 0.0003).
+//   currentPrice() returns 0.0003 BNB. Payment must equal
+//   it exactly — under- and overpayment both revert.
+// - mint() takes NO arguments and mints exactly 1 token
+//   per call. Selector 0x1249c58b == keccak("mint()")[:4].
+// - Gacha deck: a fixed deck of slots is committed before
+//   launch. Mint #n opens deck slot #n, rarity is revealed
+//   instantly in the Minted event. deckHash() is the SHA-256
+//   commitment of the whole deck (generator's convention —
+//   see the deckHash() docs).
+// - Agent-only enforced ON-CHAIN by a SPACE ID Agent ID
+//   check: the minter must hold a SPACE ID .ai Agent ID
+//   NFT (registry 0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F,
+//   the public registry also used by WEDO / Nomio /
+//   AnthroBit / Spoxy). hasAgentId uses a low-level
+//   staticcall on purpose: a high-level balanceOf call
+//   to an address with no code returns empty data, and
+//   the ABI decoder reverts on empty returndata OUTSIDE
+//   try/catch. The owner can disable the check
+//   (setAgentIdCheckRequired) or point it at a different
+//   registry (setAgentIdRegistry).
+// - Calls from contracts are rejected (NoContracts).
+// - NO PER-WALLET LIMIT. This is the OOBIX v2 rule and
+//   Nugraha's standing preference (Mythora: all mint
+//   limits removed 29 Okt 2026; XOVRATH: the one-per-wallet
+//   rule removed 30 Okt 2026, "Jangan kasih batasan untuk
+//   mint perwallet"). mintedBy is kept as a public counter
+//   for transparency only — it is NEVER enforced.
+//   Consequence, accepted by the user: one wallet holding
+//   an Agent ID CAN buy up a large share of the supply,
+//   one token per mint() call.
+// - Rarity tiers (5):
+//     0 Common, 1 Uncommon, 2 Rare, 3 Epic, 4 Legendary
+//   Exact deck counts: Common 2000, Uncommon 800,
+//   Rare 333, Epic 150, Legendary 50 = 3,333.
+// - The mint seed is stored on-chain at mint.
+// - No public mint button and no direct public mint
+//   function on the site — the website is informational
+//   only; only an authorized mint agent calls mint().
+//
+// THE DECK — design + honest limits:
+//   The deck is generated OFF-CHAIN by a deterministic
+//   seeded shuffle (scripts/deck.json, seed
+//   "RUVEQ-DECK-SEED-2026-11-04-v1", mulberry32 +
+//   Fisher-Yates) and passed to the constructor as
+//   3,333 bytes (1 byte per token, tier code 0–4).
+//   It is stored ON-CHAIN in full (_deck) and the
+//   constructor verifies the exact tier counts, so a
+//   wrong deck cannot be deployed by accident.
+//   deckHash() = SHA-256 commitment of the whole deck, in the
+//   generator's convention: SHA-256 of the deck's COMPACT JSON
+//   encoding ("[0,0,1,2,...]"). It equals the deckHash recorded
+//   in deck.json / collection.json — anyone can re-run the
+//   generator and check the commitment. NOTE: this is NOT
+//   keccak256 of the raw deck bytes (that would be a different
+//   value); the generator used SHA-256 over JSON, and the
+//   contract follows the generator so the on-chain value
+//   matches the recorded one exactly.
+//   Expected deckHash:
+//   0x1c41cd1f1305d3227b896c0c6985e6c370b7bac4b6cc6ad2be5af31248a9e8c1
+//   Mint #n draws deck slot #n; rarityOf(tokenId)
+//   returns that slot's tier; tokenRarity[tokenId]
+//   is stored at mint and emitted in Minted.
+//   HONEST LIMITS: (1) the deck is a rarity
+//   assignment, not artwork generation — artwork is
+//   pre-generated per token ID; the deck only decides
+//   which rarity tier token #n is. (2) The deck is
+//   fixed at deploy and cannot be reshuffled
+//   afterwards. (3) The seed is public (it has to be,
+//   for the commitment to be verifiable), so anyone
+//   can compute the whole deck in advance — rarity is
+//   transparent, not secret. That is the WEDO gacha
+//   trade-off, kept deliberately.
+//
+// OWNER / REVENUE — constructor parameters, NOT
+// hard-coded (except the public Agent ID registry
+// default). CONFIRMED by Nugraha 4 Nov 2026:
+// owner = My Wallet 0x0262e8e5E4584D8AB840fD950a6E2E0A414d4097,
+// revenue = Binance Agentic Wallet
+// 0x89c37649Ba3BAA9E1ce028612b7DE4e9c3a947B7.
+// Funds: each mint forwards msg.value DIRECTLY to
+// the revenue (Agentic) wallet inside the same mint()
+// call. Mint payments NEVER sit in this contract, and
+// no withdraw step is needed for them. withdraw()
+// exists only as a safety valve for funds that arrive
+// outside mint() (e.g. force-sent ETH).
+//
+// STORAGE: GitHub (OOBIX way), NOT IPFS. baseURI =
+// https://raw.githubusercontent.com/nugian10/RUVEQ/main/collection/metadata/
+// tokenURI = baseURI + tokenId + ".json".
+// WARNING: the collection is NOT pushed to GitHub yet
+// (4 Nov 2026). Mint MUST stay inactive until the
+// 3,333 metadata JSONs + SVGs are live at that URL —
+// otherwise tokenURI would 404 for every minted token.
+//
+// This contract is SOURCE-VERIFIABLE on BscScan.
+// It is NOT an independent audit — keep that
+// disclosure on the site.
+// ============================================================
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
+contract RuveqNFT is ERC721, Ownable, ReentrancyGuard {
+    using Strings for uint256;
+
+    uint256 public constant MAX_SUPPLY = 3333;
+
+    /// @notice Expected deck hash (SHA-256 of the deck's compact JSON encoding,
+    /// as computed by the deck generator — see deckHash() docs).
+    /// Used for the DeckCommitted event at deploy time: computing
+    /// deckHash() from storage during construction costs several
+    /// million gas, so the event emits this constant instead. The
+    /// deploy script verifies the hash off-chain before deploying
+    /// (and aborts on mismatch), and the deckHash() view still
+    /// computes it from storage after deploy — the test suite
+    /// checks both values match.
+    bytes32 public constant EXPECTED_DECK_HASH =
+        0x1c41cd1f1305d3227b896c0c6985e6c370b7bac4b6cc6ad2be5af31248a9e8c1;
+
+    // Rarity tier codes.
+    uint8 public constant RARITY_COMMON = 0;
+    uint8 public constant RARITY_UNCOMMON = 1;
+    uint8 public constant RARITY_RARE = 2;
+    uint8 public constant RARITY_EPIC = 3;
+    uint8 public constant RARITY_LEGENDARY = 4;
+
+    // Exact deck counts — enforced by the constructor.
+    uint256 public constant COUNT_COMMON = 2000;
+    uint256 public constant COUNT_UNCOMMON = 800;
+    uint256 public constant COUNT_RARE = 333;
+    uint256 public constant COUNT_EPIC = 150;
+    uint256 public constant COUNT_LEGENDARY = 50;
+
+    /// @notice Flat mint price for every token.
+    uint256 public constant MINT_PRICE = 0.0003 ether;
+
+    /// @notice SPACE ID .ai Agent ID NFT on BNB Smart Chain.
+    /// Public registry used by WEDO / Nomio / AnthroBit / Spoxy.
+    address public constant DEFAULT_AGENT_ID_REGISTRY =
+        0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F;
+
+    uint256 public mintPrice = MINT_PRICE;
+
+    bool public mintActive;
+    address public revenueWallet;
+    address public agentIdRegistry;
+    bool public agentIdCheckRequired = true;
+
+    string private _baseTokenURI;
+    uint256 private _nextTokenId = 1;
+
+    /// @dev The full gacha deck, 1 byte per token (tier 0–4),
+    /// stored on-chain. deckHash() commits to it.
+    bytes private _deck;
+
+    /// @dev On-chain mint seed per token.
+    mapping(uint256 => bytes32) public tokenSeed;
+    /// @dev Rarity tier per minted token (deck slot value).
+    mapping(uint256 => uint8) public tokenRarity;
+    /// @dev Mints per wallet — transparency ONLY, NEVER enforced.
+    /// There is NO per-wallet limit in this contract (OOBIX v2 rule).
+    mapping(address => uint256) public mintedBy;
+
+    event Minted(address indexed minter, uint256 indexed tokenId, uint256 price, uint8 rarity, bytes32 seed);
+    event DeckCommitted(bytes32 indexed deckHash);
+    event MintActiveChanged(bool active);
+    event BaseURIUpdated(string baseURI);
+    event RevenueWalletUpdated(address indexed revenueWallet);
+    event AgentIdRegistryUpdated(address indexed agentIdRegistry);
+    event AgentIdCheckChanged(bool required);
+    event MintPriceUpdated(uint256 mintPrice);
+    event Withdrawn(address indexed revenueWallet, uint256 amount);
+
+    error MintInactive();
+    error ExceedsMaxSupply();
+    error SoldOut();
+    error IncorrectPayment(uint256 expected, uint256 received);
+    error InvalidAddress();
+    error InvalidDeck();
+    error NoFunds();
+    error NoAgentId();
+    error NoContracts();
+    error PriceLocked();
+    error InvalidPrice();
+    error PaymentForwardFailed();
+
+    constructor(
+        address initialOwner,
+        address revenueWallet_,
+        address agentIdRegistry_,
+        string memory baseURI_,
+        bytes memory deck_
+    ) ERC721("Ruveq", "RUVEQ") Ownable(initialOwner) {
+        if (initialOwner == address(0) || revenueWallet_ == address(0) || agentIdRegistry_ == address(0)) {
+            revert InvalidAddress();
+        }
+        if (deck_.length != MAX_SUPPLY) revert InvalidDeck();
+        // Verify the exact tier counts on-chain, so a wrong
+        // deck cannot be deployed by accident.
+        uint256 c0;
+        uint256 c1;
+        uint256 c2;
+        uint256 c3;
+        uint256 c4;
+        for (uint256 i = 0; i < MAX_SUPPLY; i++) {
+            uint8 tier = uint8(deck_[i]);
+            if (tier == 0) c0++;
+            else if (tier == 1) c1++;
+            else if (tier == 2) c2++;
+            else if (tier == 3) c3++;
+            else if (tier == 4) c4++;
+            else revert InvalidDeck();
+        }
+        if (
+            c0 != COUNT_COMMON || c1 != COUNT_UNCOMMON || c2 != COUNT_RARE || c3 != COUNT_EPIC ||
+            c4 != COUNT_LEGENDARY
+        ) revert InvalidDeck();
+
+        revenueWallet = revenueWallet_;
+        agentIdRegistry = agentIdRegistry_;
+        _baseTokenURI = baseURI_;
+        _deck = deck_;
+        // Emit the constant, NOT deckHash(): rebuilding the 6,667-byte
+        // JSON encoding from 3,333 storage slots during construction
+        // costs several million gas. The deploy script already verified
+        // the hash off-chain before deploying (aborts on mismatch),
+        // and the deckHash() view recomputes it from storage after deploy.
+        emit DeckCommitted(EXPECTED_DECK_HASH);
+    }
+
+    // ---------- supply / pricing (read-only, for UI + agents) ----------
+
+    function totalSupply() public view returns (uint256) {
+        return _nextTokenId - 1;
+    }
+
+    /// @notice Alias of totalSupply().
+    function totalMinted() public view returns (uint256) {
+        return totalSupply();
+    }
+
+    function nextTokenId() public view returns (uint256) {
+        return _nextTokenId;
+    }
+
+    /// @notice True when minting is open (mintActive).
+    function mintOpen() public view returns (bool) {
+        return mintActive;
+    }
+
+    /// @notice Price of a single token ID. Reverts outside 1..MAX_SUPPLY.
+    function priceForTokenId(uint256 tokenId) public view returns (uint256) {
+        if (tokenId == 0 || tokenId > MAX_SUPPLY) revert ExceedsMaxSupply();
+        return mintPrice;
+    }
+
+    /// @notice Price of the next NFT to be minted. Reverts when sold out.
+    /// The agent reads this and sends exactly this value with mint().
+    function currentPrice() public view returns (uint256) {
+        if (_nextTokenId > MAX_SUPPLY) revert SoldOut();
+        return priceForTokenId(_nextTokenId);
+    }
+
+    /// @notice Alias of currentPrice().
+    function getMintPrice() public view returns (uint256) {
+        return currentPrice();
+    }
+
+    /// @notice SHA-256 commitment of the full on-chain deck.
+    /// Convention (from the deck generator, scripts/deck.json):
+    /// the recorded deckHash is the SHA-256 of the deck's
+    /// COMPACT JSON encoding, e.g. "[0,0,1,2,...]" — the
+    /// same value stored in deck.json / collection.json.
+    /// This function rebuilds that exact encoding from the
+    /// stored deck and hashes it, so the on-chain value
+    /// equals the recorded one. Expected:
+    /// 0x1c41cd1f1305d3227b896c0c6985e6c370b7bac4b6cc6ad2be5af31248a9e8c1
+    /// (NOTE: this is NOT keccak256 of the raw deck bytes —
+    /// that would be a different value. The generator used
+    /// SHA-256 over JSON, so the contract follows the
+    /// generator. Anyone can verify it off-chain with:
+    /// sha256(json.dumps(deck, separators=(",", ":")).encode()).)
+    function deckHash() public view returns (bytes32) {
+        // "[" + 3,333 digits + 3,332 commas + "]" = 6,667 bytes.
+        bytes memory json = new bytes(6667);
+        json[0] = "[";
+        uint256 p = 1;
+        for (uint256 i = 0; i < MAX_SUPPLY; i++) {
+            json[p++] = bytes1(uint8(48) + uint8(_deck[i]));
+            if (i + 1 < MAX_SUPPLY) json[p++] = ",";
+        }
+        json[p] = "]";
+        return sha256(json);
+    }
+
+    /// @notice Rarity tier of a token ID (its deck slot), 0 Common,
+    /// 1 Uncommon, 2 Rare, 3 Epic, 4 Legendary. Works before the
+    /// token is minted — the deck is public by design.
+    function rarityOf(uint256 tokenId) public view returns (uint8) {
+        if (tokenId == 0 || tokenId > MAX_SUPPLY) revert ExceedsMaxSupply();
+        return uint8(_deck[tokenId - 1]);
+    }
+
+    /// @notice True when `wallet` holds at least one SPACE ID
+    /// .ai Agent ID NFT in the configured registry. A registry
+    /// that does not answer like an ERC-721 returns false
+    /// instead of reverting, so a bad registry address can
+    /// never brick reads — it only blocks minting.
+    /// Implemented with a low-level staticcall on purpose: a
+    /// high-level balanceOf call to an address with no code
+    /// returns empty data, and the ABI decoder reverts on
+    /// empty returndata OUTSIDE try/catch. The low-level call
+    /// returns ok=false / short data instead, which we map
+    /// to false here.
+    function holdsAgentId(address wallet) public view returns (bool) {
+        if (agentIdRegistry == address(0)) return false;
+        (bool ok, bytes memory data) = agentIdRegistry.staticcall(
+            abi.encodeWithSelector(IERC721.balanceOf.selector, wallet)
+        );
+        if (!ok || data.length < 32) return false;
+        return abi.decode(data, (uint256)) > 0;
+    }
+
+    /// @notice Alias of holdsAgentId().
+    function hasAgentId(address wallet) public view returns (bool) {
+        return holdsAgentId(wallet);
+    }
+
+    // ---------- minting ----------
+
+    /// @notice Mint exactly ONE Ruveq machine to msg.sender.
+    /// No arguments — the token ID is the next sequential one
+    /// and opens deck slot #tokenId. Requires, in order:
+    /// mint active; caller is not a contract; caller holds
+    /// an Agent ID (unless the check is disabled); supply
+    /// remains; msg.value equals currentPrice() exactly.
+    /// NO per-wallet limit: the same wallet may call mint()
+    /// as many times as it likes (OOBIX v2 rule).
+    /// Stores the mint seed and the deck rarity.
+    /// PAYMENT FLOW: the mint forwards msg.value DIRECTLY
+    /// to the revenue wallet in this same call — it never
+    /// sits in this contract. If the forward fails, the
+    /// whole mint reverts, so no token is ever minted
+    /// without payment landing.
+    function mint() external payable nonReentrant {
+        if (!mintActive) revert MintInactive();
+        if (msg.sender.code.length > 0) revert NoContracts();
+        if (agentIdCheckRequired && !holdsAgentId(msg.sender)) revert NoAgentId();
+
+        uint256 tokenId = _nextTokenId;
+        if (tokenId > MAX_SUPPLY) revert SoldOut();
+        uint256 price = priceForTokenId(tokenId);
+        if (msg.value != price) revert IncorrectPayment(price, msg.value);
+
+        uint8 rarity = uint8(_deck[tokenId - 1]);
+        _nextTokenId++;
+        bytes32 seed = keccak256(
+            abi.encodePacked(blockhash(block.number - 1), msg.sender, tokenId)
+        );
+        tokenSeed[tokenId] = seed;
+        tokenRarity[tokenId] = rarity;
+        mintedBy[msg.sender]++;
+        _safeMint(msg.sender, tokenId);
+        emit Minted(msg.sender, tokenId, price, rarity, seed);
+
+        if (price > 0) {
+            (bool ok, ) = revenueWallet.call{value: price}("");
+            if (!ok) revert PaymentForwardFailed();
+        }
+    }
+
+    // ---------- metadata ----------
+
+    function baseURI() public view returns (string memory) {
+        return _baseTokenURI;
+    }
+
+    /// @notice tokenURI = baseURI + tokenId + ".json".
+    /// The base URI must therefore end with "/" and point at
+    /// the folder holding those files, e.g. a GitHub raw
+    /// folder URL.
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        if (_ownerOf(tokenId) == address(0)) revert ERC721NonexistentToken(tokenId);
+        return string.concat(_baseTokenURI, tokenId.toString(), ".json");
+    }
+
+    // ---------- owner-only administration ----------
+
+    function setMintActive(bool active) external onlyOwner {
+        mintActive = active;
+        emit MintActiveChanged(active);
+    }
+
+    function setBaseURI(string calldata baseURI_) external onlyOwner {
+        _baseTokenURI = baseURI_;
+        emit BaseURIUpdated(baseURI_);
+    }
+
+    function setRevenueWallet(address revenueWallet_) external onlyOwner {
+        if (revenueWallet_ == address(0)) revert InvalidAddress();
+        revenueWallet = revenueWallet_;
+        emit RevenueWalletUpdated(revenueWallet_);
+    }
+
+    /// @notice Point the Agent ID check at a different registry
+    /// (e.g. if SPACE ID migrates the .ai NFT contract).
+    function setAgentIdRegistry(address agentIdRegistry_) external onlyOwner {
+        if (agentIdRegistry_ == address(0)) revert InvalidAddress();
+        agentIdRegistry = agentIdRegistry_;
+        emit AgentIdRegistryUpdated(agentIdRegistry_);
+    }
+
+    /// @notice Turn the on-chain Agent ID check on/off.
+    /// Turning it OFF makes minting permissionless on-chain and
+    /// agent-only in the UI only (the Mythora pattern). The
+    /// change is public on-chain via this event — do not hide it.
+    function setAgentIdCheckRequired(bool required) external onlyOwner {
+        agentIdCheckRequired = required;
+        emit AgentIdCheckChanged(required);
+    }
+
+    /// @notice Change the flat mint price — ONLY before the
+    /// first mint. Once totalSupply > 0 the price is locked.
+    function setMintPrice(uint256 mintPrice_) external onlyOwner {
+        if (totalSupply() > 0) revert PriceLocked();
+        if (mintPrice_ == 0) revert InvalidPrice();
+        mintPrice = mintPrice_;
+        emit MintPriceUpdated(mintPrice_);
+    }
+
+    /// @notice Safety valve only: send any balance that
+    /// arrived OUTSIDE mint() (e.g. force-sent ETH) to the
+    /// revenue wallet. Owner-only. Mint payments are
+    /// forwarded directly by mint() and never accumulate
+    /// here, so in normal operation this reverts NoFunds.
+    function withdraw() external onlyOwner nonReentrant {
+        uint256 amount = address(this).balance;
+        if (amount == 0) revert NoFunds();
+        (bool ok, ) = revenueWallet.call{value: amount}("");
+        if (!ok) revert("Withdraw failed");
+        emit Withdrawn(revenueWallet, amount);
+    }
+}
