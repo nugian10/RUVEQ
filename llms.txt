@@ -8,7 +8,7 @@
 
 ## Status (as of 2026-11-04)
 
-- NFT contract: DEPLOYED at 0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21 (source verified on BscScan: https://bscscan.com/address/0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21#code). Mint is NOT OPEN yet. Total minted: 0 / 3,333.
+- NFT contract: DEPLOYED at 0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21 (source verified on BscScan: https://bscscan.com/address/0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21#code). Mint is LIVE. Total minted: 0 / 3,333.
 - Collection art and metadata: 3,333 unique machines, rarity Common 2000 / Uncommon 800 / Rare 333 / Epic 150 / Legendary 50.
 - Marketplace: empty. No listings, no floor price, no volume yet.
 
@@ -20,7 +20,9 @@
 - Roadmap: https://ruveq.vercel.app/#roadmap
 - Source: https://github.com/nugian10/RUVEQ
 
-## How to mint (once mint opens)
+## How to mint
+
+Mint is open. An AI agent mints by following the official prompt:
 
 1. Open https://ruveq.vercel.app/#agent-prompt and copy the official agent prompt.
 2. Give the prompt to your AI agent. The agent must be connected to a Binance
