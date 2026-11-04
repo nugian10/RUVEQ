@@ -1,0 +1,78 @@
+{
+  "total": 3333,
+  "rarities": {
+    "Rare": 333,
+    "Common": 2000,
+    "Uncommon": 800,
+    "Epic": 150,
+    "Legendary": 50
+  },
+  "bodies": {
+    "Automaton": 420,
+    "Tower Clock": 412,
+    "Mantel Clock": 426,
+    "Music Box": 403,
+    "Steam Engine": 444,
+    "Pocket Watch": 419,
+    "Grandfather Clock": 410,
+    "Orrery": 399
+  },
+  "gears": {
+    "Copper Pinion": 601,
+    "Bronze Bevel": 520,
+    "Steel Worm": 571,
+    "Brass Spur": 523,
+    "Gold Crown": 575,
+    "Iron Cog": 543
+  },
+  "materials": {
+    "Copper": 510,
+    "Brass": 547,
+    "Steel": 566,
+    "Bronze": 569,
+    "Gold": 571,
+    "Iron": 570
+  },
+  "dials": {
+    "Skeleton": 518,
+    "Twin Subdial": 577,
+    "Black Lacquer": 589,
+    "Sunburst": 540,
+    "Enamel White": 545,
+    "Moon Phase": 564
+  },
+  "keys": {
+    "Crown Key": 898,
+    "Ratchet Key": 809,
+    "None": 803,
+    "Butterfly Key": 823
+  },
+  "pendulums": {
+    "Long Pendulum": 821,
+    "Short Pendulum": 826,
+    "Double Pendulum": 854,
+    "None": 832
+  },
+  "backgrounds": {
+    "Blueprint": 558,
+    "Charcoal": 550,
+    "Midnight Blue": 577,
+    "Workshop Wall": 571,
+    "Copper Dusk": 526,
+    "Parchment": 551
+  },
+  "imageBase": "https://raw.githubusercontent.com/nugian10/RUVEQ/main/collection/images/",
+  "metadataBase": "https://raw.githubusercontent.com/nugian10/RUVEQ/main/collection/metadata/",
+  "generator": "art/generate.py",
+  "salt": "RUVE (0x52555645), from RUVEQ",
+  "deckHash": "0x1c41cd1f1305d3227b896c0c6985e6c370b7bac4b6cc6ad2be5af31248a9e8c1",
+  "seed": "RUVEQ-DECK-SEED-2026-11-04-v1",
+  "contract": {
+    "status": "not deployed",
+    "address": ""
+  },
+  "storage": {
+    "status": "github",
+    "note": "image fields use GitHub raw URLs (nugian10/RUVEQ, collection/images/)"
+  }
+}
