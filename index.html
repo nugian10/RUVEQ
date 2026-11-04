@@ -36,7 +36,7 @@
         { "@type": "PropertyValue", "name": "Token standard", "value": "ERC-721" },
         { "@type": "PropertyValue", "name": "Total supply", "value": "3,333 antique clockwork machines" },
         { "@type": "PropertyValue", "name": "Mint method", "value": "Agent-only minting" },
-        { "@type": "PropertyValue", "name": "Mint status", "value": "Mint not open yet — contract not deployed yet" }
+        { "@type": "PropertyValue", "name": "Mint status", "value": "Mint not open yet — contract deployed" }
       ]
     }
   ]
@@ -328,7 +328,7 @@ footer p{color:var(--ink2);font-size:14px;max-width:60ch}
           <a class="btn primary" href="#agent-prompt">Mint &rarr;</a>
           <a class="btn" href="#machines">View the Machines</a>
         </div>
-        <div class="status-note"><b>Mint is not open yet.</b> The RUVEQ contract has not been deployed, so there is no official contract address yet and no machine can be minted. This page is the workshop — where you can look at the machines before the first winding begins.</div>
+        <div class="status-note"><b>Mint is not open yet.</b> The RUVEQ contract is <b>Deployed</b> on BNB Chain — contract address: <span class="mono" style="overflow-wrap:anywhere">0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21</span>. No machine can be minted yet. This page is the workshop — where you can look at the machines before the first winding begins.</div>
       </div>
       <figure style="margin:0">
         <div class="hero-art">
@@ -404,19 +404,19 @@ footer p{color:var(--ink2);font-size:14px;max-width:60ch}
       <div class="mint-banner">
         <div class="gears-line" aria-hidden="true">&#9881; &#9881; &#9881;</div>
         <h2>MINT NOT OPEN YET</h2>
-        <p>CONTRACT NOT DEPLOYED YET &middot; NO PUBLIC MINT BUTTON &middot; AGENT-ONLY MINTING</p>
+        <p>CONTRACT DEPLOYED &middot; NO PUBLIC MINT BUTTON &middot; AGENT-ONLY MINTING</p>
       </div>
 
       <div class="mint-table">
         <h3>Mint Information</h3>
         <dl style="margin:0">
-          <div class="row"><dt>STATUS</dt><dd>Not open yet — contract not deployed</dd></div>
+          <div class="row"><dt>STATUS</dt><dd>Not open yet — contract deployed</dd></div>
           <div class="row"><dt>NETWORK</dt><dd>BNB Chain (Chain ID 56)</dd></div>
           <div class="row"><dt>STANDARD</dt><dd>ERC-721</dd></div>
           <div class="row"><dt>TOTAL SUPPLY</dt><dd>3,333 machines</dd></div>
           <div class="row"><dt>MINTED</dt><dd>&mdash;</dd></div>
           <div class="row"><dt>REMAINING</dt><dd>&mdash;</dd></div>
-          <div class="row"><dt>CONTRACT ADDRESS</dt><dd>&mdash; (not deployed yet)</dd></div>
+          <div class="row"><dt>CONTRACT ADDRESS</dt><dd><span class="mono" style="overflow-wrap:anywhere">0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21</span></dd></div>
           <div class="row"><dt>PER-WALLET LIMIT</dt><dd>No limit</dd></div>
           <div class="row"><dt>MINT METHOD</dt><dd>Agent only — 1 machine per mint call</dd></div>
         </dl>
@@ -439,10 +439,10 @@ footer p{color:var(--ink2);font-size:14px;max-width:60ch}
 
 Task: mint 1 RUVEQ NFT — an antique clockwork machine collection, ERC-721, total supply 3,333.
 
-CURRENT STATUS: RUVEQ minting is NOT OPEN YET and its contract has NOT been deployed. Before doing anything, check the project's official status. If no official contract address has been announced, STOP and report to me that minting is not open yet. Do not send any transaction, and do not mint from any address that the project has not officially announced.
+CURRENT STATUS: RUVEQ minting is NOT OPEN YET. The contract is DEPLOYED on BNB Chain at 0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21. Before doing anything, check the project's official status. If minting is not open, STOP and report to me that minting is not open yet. Do not send any transaction.
 
 IF MINTING OPENS LATER:
-1. Use the official RUVEQ contract address announced by the project on BNB Chain.
+1. Use the official RUVEQ contract address on BNB Chain: 0x1bd0554899b1cbadb3ac68b95a72fa5320d52a21.
 2. The flat mint price is 0.0003 BNB for 1 token. Show me this exact amount in the wallet confirmation before signing — do not sign before I approve it.
 3. Call the mint() function with no arguments, exactly 1 token per call, with the payment value exactly matching the price above.
 4. Wait for the transaction to confirm, then report the token number and transaction hash to me.</pre>
@@ -474,7 +474,7 @@ IF MINTING OPENS LATER:
       <div class="market-empty">
         <div class="big" aria-hidden="true">&#9881;</div>
         <h3>No listings yet</h3>
-        <p>Not a single RUVEQ machine has been minted yet — the contract itself has not been deployed. So there is nothing here to sell, buy, or display. This section will carry real listings once minting opens and the first machine changes hands.</p>
+        <p>Not a single RUVEQ machine has been minted yet — the contract is deployed, but minting is not open yet. So there is nothing here to sell, buy, or display. This section will carry real listings once minting opens and the first machine changes hands.</p>
       </div>
     </div>
   </section>
@@ -518,7 +518,7 @@ IF MINTING OPENS LATER:
 <footer>
   <div class="wrap">
     <div class="fbrand">RUVEQ</div>
-    <p>3,333 antique clockwork machines &middot; BNB Chain (56) &middot; ERC-721 &middot; agent-only minting. The contract has not been deployed and minting is not open yet — the official address will only ever be announced on this page.</p>
+    <p>3,333 antique clockwork machines &middot; BNB Chain (56) &middot; ERC-721 &middot; agent-only minting. The contract is deployed and minting is not open yet — the official address is announced on this page.</p>
     <p class="mono" style="font-size:12.5px">Tick. Tock. Tick. Tock. &mdash; The RUVEQ Workshop</p>
   </div>
 </footer>
